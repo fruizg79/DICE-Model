@@ -39,12 +39,12 @@ class cdicemodel:
         self.emission_intensity_d = 0.01
         # Abatement Cost:
         self.abatement_rate_initial_value       = abatement_rate_initial_value
-        self.abatement_rate_d                   = 0.01
-        self.emission_intensity_d               = 0.0
+        self.abatement_rate_g                   = 0.1
+        self.emission_intensity_d               = 0.00001
         self.theta_1 = 0.01 # TBC
         self.theta_2 = 2.6
         # economic variables
-        self.s   = 0.15 # Saving rate        
+        self.s   = 0.05 # Saving rate        
         self.theta =  0.5
         self.rho   =  0.04
         self.alpha = 0.3
@@ -67,13 +67,14 @@ class cdicemodel:
     def get_df_output(self):
         df_output = pd.DataFrame(columns=["Y","K","I","L","A","U","T_AT",\
                                           "mu", "total_emissions","industrial_emissions",\
-                                              "land_emissions","Q"],
+                                              "land_emissions","Q","emission_intensity"],
                                  index = range(self.initial_year,self.end_year+1))
         return df_output
         
     def get_emission_intensity(self,year):
         tau = year - self.initial_year
         emission_intensity = self.emission_intenisity_initial_value*(1+self.emission_intensity_d)**-tau
+        self.df_output.loc[year]['emission_intensity'] = emission_intensity
         return emission_intensity
     def get_temperature_vector_df(self,year,T_AT,T_LO):
         if year == self.initial_year:
@@ -130,15 +131,16 @@ class cdicemodel:
         return I
     def get_abatement_rate(self,year):
         if year==self.initial_year:
-            abatemenr_rate = self.abatement_rate_initial_value            
+            abatemenr_rate = 0#self.abatement_rate_initial_value            
         else:
             tau = year - self.initial_year-1
-            abatemenr_rate = self.abatement_rate_initial_value*(1+self.abatement_rate_d)**-tau
+            abatemenr_rate = self.abatement_rate_initial_value*(1+self.abatement_rate_g)**tau
+            abatemenr_rate = min(1,abatemenr_rate)
         self.df_output.loc[year]["mu"] = abatemenr_rate
         return abatemenr_rate
 
     def get_damage_cost(self,temperature_at):
-        pi_1 = 0
+        pi_1 = 0.001
         pi_2 = 2.67*10**-3
         omega = pi_1*temperature_at+pi_2*temperature_at**2
         return omega
