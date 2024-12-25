@@ -12,16 +12,17 @@ import math
 runfile('C:/Users/fruiz/Documents/GitHub/pydicemodel/cpydicemodel.py',
         wdir='C:/Users/fruiz/Documents/GitHub/pydicemodel')
 
-initial_year = 2017
+initial_year = 2023
 end_year     = 2100
-industrial_emissions_initial_value  = 33.61 #gtCO2
+industrial_emissions_initial_value  = 37.0 #gtCO2
 land_emissions_initial_value        = 3.3
 emission_intenisity_initial_value   = 0.27
 population_initial_value            = 7.8
 capital_initial_value               = 318.773
 tfp_initial_value                   = 5.276
-abatement_rate_initial_value        = -((0.01/33.61)**(1/(2050-2017))-1)
-
+abatement_rate_initial_value        = 0.001#-((0.01/33.61)**(1/(2050-2017))-1)
+abatement_rate_growth               = 0.25
+saving_rate                         = 0.20
 
 
 
@@ -34,9 +35,11 @@ dicemodel1 = cdicemodel(initial_year,
                  population_initial_value,
                  capital_initial_value,
                  tfp_initial_value,
-                 abatement_rate_initial_value)
+                 abatement_rate_initial_value,
+                 abatement_rate_growth,
+                 saving_rate)
 
-for y in range(2017,2101):
+for y in range(2023,2101):
     dicemodel1.get_one_step(y)
 
 df   = dicemodel1.df_output

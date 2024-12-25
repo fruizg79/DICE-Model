@@ -18,7 +18,9 @@ class cdicemodel:
                      population_initial_value,
                      capital_initial_value,
                      tfp_initial_value,
-                     abatement_rate_initial_value):
+                     abatement_rate_initial_value,
+                     abatement_rate_growth,
+                     saving_rate):
         
         self.initial_year = initial_year
         self.end_year = end_year
@@ -39,12 +41,12 @@ class cdicemodel:
         self.emission_intensity_d = 0.01
         # Abatement Cost:
         self.abatement_rate_initial_value       = abatement_rate_initial_value
-        self.abatement_rate_g                   = 0.1
+        self.abatement_rate_g                   = abatement_rate_growth
         self.emission_intensity_d               = 0.00001
         self.theta_1 = 0.01 # TBC
         self.theta_2 = 2.6
         # economic variables
-        self.s   = 0.05 # Saving rate        
+        self.s   = saving_rate # Saving rate        
         self.theta =  0.5
         self.rho   =  0.04
         self.alpha = 0.3
