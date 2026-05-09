@@ -2,15 +2,15 @@
 """
 cpydicemodel.py
 ---------------
-Modelo DICE (Dynamic Integrated Climate-Economy) — versión refactorizada.
+DICE (Dynamic Integrated Climate-Economy) model — refactored version.
 
-Cambios respecto a la versión original:
-  1. Todos los parámetros hardcodeados se leen de dice_config.py.
-  2. Corregido el exponente en get_abatement_cost (mu**theta_2, no mu*theta_2**2).
-  3. get_one_step devuelve un dict con métricas en lugar de una cadena fija.
-  4. capital_initial_value del constructor se usa realmente (antes ignorado).
-  5. Eliminada dependencia de runfile() (específico de Spyder).
-  6. Pequeñas mejoras de robustez en get_temperature_vector y get_carbon_concentration.
+Changes from the original:
+  1. All hard-coded parameters are now read from dice_config.py.
+  2. Fixed exponent in get_abatement_cost (mu**theta_2, not mu*theta_2**2).
+  3. get_one_step returns a dict with key metrics instead of a fixed string.
+  4. capital_initial_value constructor argument is now actually used (was ignored before).
+  5. Removed dependency on runfile() (Spyder-specific).
+  6. Minor robustness improvements in get_temperature_vector and get_carbon_concentration.
 """
 
 import numpy as np
@@ -27,7 +27,7 @@ from dice_config import (
 
 
 class cdicemodel:
-    """Modelo DICE en Python.
+    """DICE model in Python.
 
     Parameters
     ----------
@@ -36,15 +36,15 @@ class cdicemodel:
     industrial_emissions_initial_value : float   (GtCO2)
     land_emissions_initial_value : float         (GtCO2)
     emission_intensity_initial_value : float
-    population_initial_value : float             (miles de millones)
-    capital_initial_value : float                (billones USD 2010)
+    population_initial_value : float             (billions)
+    capital_initial_value : float                (trillion USD 2010)
     tfp_initial_value : float
-    abatement_rate_initial_value : float         (fracción, 0-1)
+    abatement_rate_initial_value : float         (fraction, 0-1)
     abatement_rate_growth : float
-    saving_rate : float                          (fracción, 0-1)
+    saving_rate : float                          (fraction, 0-1)
     config : dict, optional
-        Permite sobreescribir cualquier subconjunto de parámetros de calibración
-        sin editar dice_config.py. Ejemplo:
+        Allows overriding any subset of calibration parameters without editing
+        dice_config.py. Example:
             config={"CALIBRATION_ECONOMIC": {"alpha": 0.35}}
     """
 
@@ -63,12 +63,12 @@ class cdicemodel:
         saving_rate,
         config: dict = None,
     ):
-        # ── Horizonte temporal ───────────────────────────────────────────────
+        # ── Time horizon ────────────────────────────────────────────────────
         self.initial_year = initial_year
         self.end_year = end_year
         self._years = range(initial_year, end_year + 1)
 
-        # ── Parámetros de configuración (con posible override) ───────────────
+        # ── Configuration parameters (with optional override) ───────────────
         cfg = {
             "INITIAL_CONDITIONS": dict(INITIAL_CONDITIONS),
             "CALIBRATION_ECONOMIC": dict(CALIBRATION_ECONOMIC),
@@ -88,13 +88,13 @@ class cdicemodel:
         cli = cfg["CALIBRATION_CLIMATE"]
         frc = cfg["SCENARIO_FORCING"]
 
-        # ── Condiciones iniciales ────────────────────────────────────────────
+        # ── Initial conditions ───────────────────────────────────────────────
         self.T_AT = ic["T_AT"]
         self.T_LO = ic["T_LO"]
         self.carbon_concentration_initial_value = np.array(ic["carbon_concentration"], dtype=float)
-        self.K0 = capital_initial_value  # usa el parámetro del constructor ✅
+        self.K0 = capital_initial_value  # uses the constructor argument ✅
 
-        # ── Emisiones ────────────────────────────────────────────────────────
+        # ── Emissions ────────────────────────────────────────────────────────
         self.industrial_emissions_initial_value = industrial_emissions_initial_value
         self.land_emissions_initial_value = land_emissions_initial_value
         self.emission_intensity_initial_value = emission_intensity_initial_value
@@ -105,17 +105,17 @@ class cdicemodel:
         self.emission_intensity_d = aba["emission_intensity_d"]
         self.land_emissions_d = aba["land_emissions_d"]
 
-        # ── Abatimiento ──────────────────────────────────────────────────────
+        # ── Abatement ────────────────────────────────────────────────────────
         self.abatement_rate_initial_value = abatement_rate_initial_value
         self.abatement_rate_g = abatement_rate_growth
         self.theta_1 = aba["theta_1"]
         self.theta_2 = aba["theta_2"]
 
-        # ── Daños ────────────────────────────────────────────────────────────
+        # ── Damages ──────────────────────────────────────────────────────────
         self.pi_1 = dmg["pi_1"]
         self.pi_2 = dmg["pi_2"]
 
-        # ── Economía ─────────────────────────────────────────────────────────
+        # ── Economy ──────────────────────────────────────────────────────────
         self.s = saving_rate
         self.theta = eco["theta"]
         self.rho = eco["rho"]
@@ -128,11 +128,11 @@ class cdicemodel:
         self.L_d = eco["L_d"]
         self.K_d = eco["K_d"]
 
-        # ── Bienestar ────────────────────────────────────────────────────────
+        # ── Welfare ──────────────────────────────────────────────────────────
         self.theta_welfare = eco["theta_welfare"]
         self.discount_rate_utility = eco["discount_rate_utility"]
 
-        # ── Clima ────────────────────────────────────────────────────────────
+        # ── Climate ──────────────────────────────────────────────────────────
         self.phi_matrix = np.array(cli["phi_matrix"])
         self.b_matrix = np.array(cli["b_matrix"])
         self.ep_1 = cli["ep_1"]
@@ -143,19 +143,19 @@ class cdicemodel:
         self.cc_at_1750 = cli["cc_at_1750"]
         self.nu = cli["nu"]
 
-        # ── Forzamiento exógeno ──────────────────────────────────────────────
+        # ── Exogenous forcing ────────────────────────────────────────────────
         self.f_ex_base_year_value = frc["f_ex_base_year_value"]
         self.f_ex_end_year_value = frc["f_ex_end_year_value"]
         self.f_ex_base_year = frc["f_ex_base_year"]
         self.f_ex_end_year = frc["f_ex_end_year"]
 
-        # ── Inicialización de DataFrames ─────────────────────────────────────
+        # ── DataFrame initialisation ─────────────────────────────────────────
         self.temperature_vector_initial_value = np.array([self.T_AT, self.T_LO])
         self.df_output = self._init_df_output()
         self.df_temperature = self._init_df_temperature()
         self.df_carbon_concentration = self._init_df_carbon()
 
-    # ── Inicialización de DataFrames ─────────────────────────────────────────
+    # ── DataFrame initialisation ─────────────────────────────────────────────
 
     def _init_df_output(self) -> pd.DataFrame:
         cols = [
@@ -176,7 +176,7 @@ class cdicemodel:
         df.loc[self.initial_year] = self.carbon_concentration_initial_value
         return df
 
-    # ── Módulo económico ──────────────────────────────────────────────────────
+    # ── Economic module ───────────────────────────────────────────────────────
 
     def get_gross_production(self, year: int) -> float:
         tau = year - self.initial_year
@@ -229,7 +229,7 @@ class cdicemodel:
         self.df_output.loc[year, "U"] = U
         return U
 
-    # ── Módulo de emisiones ───────────────────────────────────────────────────
+    # ── Emissions module ──────────────────────────────────────────────────────
 
     def get_emission_intensity(self, year: int) -> float:
         tau = year - self.initial_year
@@ -267,16 +267,16 @@ class cdicemodel:
         self.df_output.loc[year, "total_emissions"] = te
         return te
 
-    # ── Módulo de costes ──────────────────────────────────────────────────────
+    # ── Cost module ───────────────────────────────────────────────────────────
 
     def get_abatement_cost(self, mu: float) -> float:
-        # CORRECCIÓN: exponente sobre mu, no sobre theta_2 ✅
+        # FIX: exponent applied to mu, not to theta_2 ✅
         return self.theta_1 * mu ** self.theta_2
 
     def get_damage_cost(self, temperature_at: float) -> float:
         return self.pi_1 * temperature_at + self.pi_2 * temperature_at ** 2
 
-    # ── Módulo climático ──────────────────────────────────────────────────────
+    # ── Climate module ────────────────────────────────────────────────────────
 
     def get_carbon_concentration(self, year: int, carbon_emissions: np.ndarray) -> np.ndarray:
         if year == self.initial_year:
@@ -309,14 +309,14 @@ class cdicemodel:
         self.df_output.loc[year, ["T_AT", "T_LO"]] = tv
         return tv
 
-    # ── Paso del modelo ───────────────────────────────────────────────────────
+    # ── Model step ────────────────────────────────────────────────────────────
 
     def get_one_step(self, year: int) -> dict:
-        """Avanza el modelo un año.
+        """Advance the model by one year.
 
         Returns
         -------
-        dict con las métricas principales del período.
+        dict with the main metrics for the period.
         """
         Y = self.get_gross_production(year)
         mu = self.get_abatement_rate(year)
@@ -348,10 +348,10 @@ class cdicemodel:
             "U": U,
         }
 
-    # ── Ejecución completa ────────────────────────────────────────────────────
+    # ── Full run ──────────────────────────────────────────────────────────────
 
     def run(self) -> pd.DataFrame:
-        """Ejecuta el modelo para todo el horizonte temporal."""
+        """Run the model for the full time horizon."""
         for year in self._years:
             self.get_one_step(year)
         return self.df_output
